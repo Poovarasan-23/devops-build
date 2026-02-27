@@ -1,6 +1,6 @@
 version: '3'
 services:
   react-app:
-    image: poov23/dev:latest
+    image: ${IMAGE_NAME}
     ports:
       - "80:80"

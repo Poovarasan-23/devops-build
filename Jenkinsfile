@@ -2,8 +2,10 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'docker-creds'
-        DOCKER_IMAGE = 'poov23/devops-build'
+        DOCKER_CREDS = 'docker-creds'
+        DEV_IMAGE  = 'poov23/dev'
+        PROD_IMAGE = 'poov23/prod'
+        TAG = 'latest'
     }
 
     stages {
@@ -14,23 +16,27 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Dev') {
+            when {
+                branch 'dev'
+            }
             steps {
                 script {
-                    sh """
-                        docker build -t ${DOCKER_IMAGE}:${BRANCH_NAME} .
-                    """
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDS) {
+                        sh "bash build.sh ${DEV_IMAGE} ${TAG}"
+                    }
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Build & Push Prod') {
+            when {
+                branch 'main'
+            }
             steps {
                 script {
-                    withDockerRegistry([credentialsId: DOCKERHUB_CREDENTIALS, url: '']) {
-                        sh """
-                            docker push ${DOCKER_IMAGE}:${BRANCH_NAME}
-                        """
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDS) {
+                        sh "bash build.sh ${PROD_IMAGE} ${TAG}"
                     }
                 }
             }
@@ -41,8 +47,8 @@ pipeline {
                 branch 'dev'
             }
             steps {
-                echo "Deploying to DEV environment..."
-                sh "bash deploy.sh dev"
+                echo "Deploying to DEV server..."
+                sh "bash deploy.sh ${DEV_IMAGE}:${TAG}"
             }
         }
 
@@ -51,8 +57,8 @@ pipeline {
                 branch 'main'
             }
             steps {
-                echo "Deploying to PRODUCTION environment..."
-                sh "bash deploy.sh prod"
+                echo "Deploying to PROD server..."
+                sh "bash deploy.sh ${PROD_IMAGE}:${TAG}"
             }
         }
     }
