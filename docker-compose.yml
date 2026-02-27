@@ -1,0 +1,6 @@
+version: '3'
+services:
+  react-app:
+    image: poov23/dev:latest
+    ports:
+      - "80:80"
