@@ -30,7 +30,7 @@ pipeline {
                 branch 'master'
             }
             steps {
-                sh 'docker build -t $PROD_IMAGE:latest .'
+                sh 'sh docker build -t poov23/dev:latest ./dev'
                 sh 'docker push $PROD_IMAGE:latest'
             }
         }
