@@ -10,8 +10,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: "${env.BRANCH_NAME}", 
-                    url: 'https://github.com/Poovarasan-23/devops-build.git'
+                git branch: 'dev', url: 'https://github.com/Poovarasan-23/devops-build.git'
             }
         }
 
@@ -20,8 +19,12 @@ pipeline {
                 branch 'dev'
             }
             steps {
-                sh 'docker build -t $DEV_IMAGE:latest .'
-                sh 'docker push $DEV_IMAGE:latest'
+                script {
+                    docker.withRegistry('', 'dockerhub-creds') {
+                        def image = docker.build("${DEV_IMAGE}:latest")
+                        image.push()
+                    }
+                }
             }
         }
 
@@ -30,8 +33,12 @@ pipeline {
                 branch 'master'
             }
             steps {
-                sh 'sh docker build -t poov23/dev:latest ./dev'
-                sh 'docker push $PROD_IMAGE:latest'
+                script {
+                    docker.withRegistry('', 'dockerhub-creds') {
+                        def image = docker.build("${PROD_IMAGE}:latest")
+                        image.push()
+                    }
+                }
             }
         }
     }
