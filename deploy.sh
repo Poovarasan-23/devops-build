@@ -2,11 +2,11 @@
 
 IMAGE=$1
 
-export IMAGE_NAME=$IMAGE
-
-docker pull $IMAGE
-
 docker stop react-app || true
 docker rm react-app || true
 
-docker-compose up -d
+if [[ "$IMAGE" == *"dev"* ]]; then
+    docker run -d -p 3000:80 --name react-app $IMAGE
+else
+    docker run -d -p 80:80 --name react-app $IMAGE
+fi
