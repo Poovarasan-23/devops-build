@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "yourdockerhubusername/devops-build"
-        DOCKER_CREDENTIALS = "docker-creds"   // Jenkins credential ID
+        DOCKERHUB_CREDENTIALS = 'docker-creds'
+        DOCKER_IMAGE = 'poov23/devops-build'
     }
 
     stages {
@@ -17,7 +17,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${env.BRANCH_NAME}")
+                    sh """
+                        docker build -t ${DOCKER_IMAGE}:${BRANCH_NAME} .
+                    """
                 }
             }
         }
@@ -25,8 +27,10 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    docker.withRegistry('', DOCKER_CREDENTIALS) {
-                        docker.image("${DOCKER_IMAGE}:${env.BRANCH_NAME}").push()
+                    withDockerRegistry([credentialsId: DOCKERHUB_CREDENTIALS, url: '']) {
+                        sh """
+                            docker push ${DOCKER_IMAGE}:${BRANCH_NAME}
+                        """
                     }
                 }
             }
@@ -37,11 +41,8 @@ pipeline {
                 branch 'dev'
             }
             steps {
-                sh '''
-                docker stop dev-container || true
-                docker rm dev-container || true
-                docker run -d -p 3001:3000 --name dev-container ${DOCKER_IMAGE}:dev
-                '''
+                echo "Deploying to DEV environment..."
+                sh "bash deploy.sh dev"
             }
         }
 
@@ -50,11 +51,8 @@ pipeline {
                 branch 'main'
             }
             steps {
-                sh '''
-                docker stop prod-container || true
-                docker rm prod-container || true
-                docker run -d -p 3000:3000 --name prod-container ${DOCKER_IMAGE}:main
-                '''
+                echo "Deploying to PRODUCTION environment..."
+                sh "bash deploy.sh prod"
             }
         }
     }
