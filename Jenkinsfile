@@ -2,43 +2,59 @@ pipeline {
     agent any
 
     environment {
-        DEV_IMAGE = "poov23/dev"
-        PROD_IMAGE = "poov23/prod"
+        DOCKER_IMAGE = "yourdockerhubusername/devops-build"
+        DOCKER_CREDENTIALS = "docker-creds"   // Jenkins credential ID
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git branch: 'dev', url: 'https://github.com/Poovarasan-23/devops-build.git'
+                checkout scm
             }
         }
 
-        stage('Build & Push Dev') {
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${DOCKER_IMAGE}:${env.BRANCH_NAME}")
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('', DOCKER_CREDENTIALS) {
+                        docker.image("${DOCKER_IMAGE}:${env.BRANCH_NAME}").push()
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Dev') {
             when {
                 branch 'dev'
             }
             steps {
-                script {
-                    docker.withRegistry('', 'dockerhub-creds') {
-                        def image = docker.build("${DEV_IMAGE}:latest")
-                        image.push()
-                    }
-                }
+                sh '''
+                docker stop dev-container || true
+                docker rm dev-container || true
+                docker run -d -p 3001:3000 --name dev-container ${DOCKER_IMAGE}:dev
+                '''
             }
         }
 
-        stage('Build & Push Prod') {
+        stage('Deploy to Prod') {
             when {
-                branch 'master'
+                branch 'main'
             }
             steps {
-                script {
-                    docker.withRegistry('', 'dockerhub-creds') {
-                        def image = docker.build("${PROD_IMAGE}:latest")
-                        image.push()
-                    }
-                }
+                sh '''
+                docker stop prod-container || true
+                docker rm prod-container || true
+                docker run -d -p 3000:3000 --name prod-container ${DOCKER_IMAGE}:main
+                '''
             }
         }
     }
